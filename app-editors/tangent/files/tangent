@@ -1,0 +1,5 @@
+#!/bin/sh
+
+DESTDIR="@@DESTDIR@@"
+
+exec "${DESTDIR}/tangent" @@WAYLAND_FLAGS@@ "$@"
