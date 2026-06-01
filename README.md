@@ -11,7 +11,7 @@ The package builds Tangent from source with offline vendored npm/Electron cache 
 Using `eselect-repository`:
 
 ```bash
-sudo eselect repository add tangent-overlay git https://github.com/visrosa/Tangent.git
+sudo eselect repository add tangent-overlay git https://github.com/visrosa/tangent-overlay.git
 sudo emaint sync -r tangent-overlay
 ```
 
