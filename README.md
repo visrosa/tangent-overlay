@@ -34,11 +34,11 @@ sudo emerge --ask =app-editors/tangent-0.12.0_beta8
 Live git main:
 
 ```bash
-sudo cp tangent-9999-vendor.tar.zst /var/cache/distfiles/
+sudo cp tangent-9999-gentoo-vendor.tar.zst /var/cache/distfiles/
 sudo emerge --ask =app-editors/tangent-9999
 ```
 
-The live ebuild requires a local vendor cache tarball at `${DISTDIR}/tangent-9999-vendor.tar.zst` so it can build without npm network access.
+The live ebuild requires a local vendor cache tarball at `${DISTDIR}/tangent-9999-gentoo-vendor.tar.zst` so it can build without npm network access.
 
 ## Notes
 

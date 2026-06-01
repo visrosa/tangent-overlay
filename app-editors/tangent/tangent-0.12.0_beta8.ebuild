@@ -15,10 +15,10 @@ DESCRIPTION="Your Notes, Your Thoughts; Your Tangent"
 HOMEPAGE="https://github.com/visrosa/Tangent"
 MY_PV="${PV/_beta/-beta.}"
 SRC_URI="
-	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-source.tar.gz
-		-> ${P}-source.tar.gz
-	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-vendor.tar.zst
-		-> ${P}-vendor.tar.zst
+	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-gentoo-source.tar.gz
+		-> ${P}-gentoo-source.tar.gz
+	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-gentoo-vendor.tar.zst
+		-> ${P}-gentoo-vendor.tar.zst
 "
 S="${WORKDIR}/tangent-${MY_PV}"
 
@@ -60,9 +60,9 @@ DESTDIR="/opt/${PN}"
 QA_PREBUILT="*"
 
 src_unpack() {
-	unpack "${P}-source.tar.gz"
+	unpack "${P}-gentoo-source.tar.gz"
 	cd "${S}" || die
-	tar --zstd -xf "${DISTDIR}/${P}-vendor.tar.zst" || die
+	tar --zstd -xf "${DISTDIR}/${P}-gentoo-vendor.tar.zst" || die
 }
 
 src_configure() {

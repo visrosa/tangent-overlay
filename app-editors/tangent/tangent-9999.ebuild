@@ -55,7 +55,7 @@ QA_PREBUILT="*"
 src_unpack() {
 	git-r3_src_unpack
 
-	local vendor_tarball="${DISTDIR}/${P}-vendor.tar.zst"
+	local vendor_tarball="${DISTDIR}/${P}-gentoo-vendor.tar.zst"
 	if [[ ! -f "${vendor_tarball}" ]]; then
 		die "Missing ${vendor_tarball}. Create or download a live vendor cache tarball and place it in DISTDIR."
 	fi
