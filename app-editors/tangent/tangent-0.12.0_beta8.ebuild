@@ -15,9 +15,9 @@ DESCRIPTION="Your Notes, Your Thoughts; Your Tangent"
 HOMEPAGE="https://github.com/visrosa/Tangent"
 MY_PV="${PV/_beta/-beta.}"
 SRC_URI="
-	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-gentoo-source.tar.gz
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${MY_PV}/tangent-${MY_PV}-gentoo-source.tar.gz
 		-> ${P}-gentoo-source.tar.gz
-	https://github.com/visrosa/Tangent/releases/download/v${MY_PV}/tangent-${MY_PV}-gentoo-vendor.tar.zst
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${MY_PV}/tangent-${MY_PV}-gentoo-vendor.tar.zst
 		-> ${P}-gentoo-vendor.tar.zst
 "
 S="${WORKDIR}/tangent-${MY_PV}"
@@ -96,9 +96,9 @@ src_install() {
 	local app_exe="${app_dir}/tangent"
 	[[ -x "${app_exe}" ]] || app_exe="${app_dir}/tangent_electron"
 
-	pushd "${app_dir}/locales" > /dev/null || die
+	pushd "${app_dir}/locales" >/dev/null || die
 	chromium_remove_language_paks
-	popd > /dev/null || die
+	popd >/dev/null || die
 
 	exeinto "${DESTDIR}"
 	newexe "${app_exe}" tangent
@@ -120,13 +120,13 @@ src_install() {
 
 	local exec_extra_flags=()
 	if use wayland; then
-		exec_extra_flags+=( "--ozone-platform-hint=auto" "--enable-wayland-ime" )
+		exec_extra_flags+=("--ozone-platform-hint=auto" "--enable-wayland-ime")
 	fi
 
 	sed \
 		-e "s|@@DESTDIR@@|${DESTDIR}|g" \
 		-e "s|@@WAYLAND_FLAGS@@|${exec_extra_flags[*]}|g" \
-		"${FILESDIR}/${PN}" > "${T}/tangent" || die
+		"${FILESDIR}/${PN}" >"${T}/tangent" || die
 	exeinto /usr/bin
 	newexe "${T}/tangent" tangent
 
