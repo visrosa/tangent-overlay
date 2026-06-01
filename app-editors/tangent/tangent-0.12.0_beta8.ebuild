@@ -71,9 +71,11 @@ src_configure() {
 }
 
 src_compile() {
-	mkdir -p "${T}/home" || die
+	mkdir -p "${T}/home" "${T}/cache" || die
 	export HOME="${T}/home"
+	export XDG_CACHE_HOME="${T}/cache"
 	export npm_config_cache="${S}/vendor/npm-cache"
+	export NPM_CONFIG_CACHE="${S}/vendor/npm-cache"
 	export npm_config_offline=true
 	export npm_config_audit=false
 	export npm_config_fund=false
@@ -81,12 +83,12 @@ src_compile() {
 	export ELECTRON_CACHE="${S}/vendor/electron-cache"
 	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
 
-	npm ci --workspaces --include-workspace-root --offline || die
-	npm run build --workspace packages/tangent-query-parser || die
-	npm run build --workspace packages/tangent-html-to-markdown || die
-	npm run build --workspace lib/typewriter || die
-	npm run build --workspace apps/tangent-electron || die
-	npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
+	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
+	npm --cache "${S}/vendor/npm-cache" exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
 }
 
 src_install() {
@@ -125,6 +127,7 @@ src_install() {
 		-e "s|@@DESTDIR@@|${DESTDIR}|g" \
 		-e "s|@@WAYLAND_FLAGS@@|${exec_extra_flags[*]}|g" \
 		"${FILESDIR}/${PN}" > "${T}/tangent" || die
+	exeinto /usr/bin
 	newexe "${T}/tangent" tangent
 
 	make_desktop_entry --eapi9 "/usr/bin/tangent" -a "%U" -n Tangent -i tangent -c Office \
