@@ -9,17 +9,22 @@ CHROMIUM_LANGS="
 	sw ta te th tr uk ur vi zh-CN zh-TW
 "
 
-inherit chromium-2 desktop git-r3 unpacker xdg
+inherit chromium-2 desktop unpacker xdg
 
 DESCRIPTION="Your Notes, Your Thoughts; Your Tangent"
 HOMEPAGE="https://github.com/visrosa/Tangent"
-EGIT_REPO_URI="https://github.com/visrosa/Tangent.git"
-EGIT_BRANCH="main"
+SRC_URI="
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${PV}/tangent-${PV}-gentoo-source.tar.gz
+		-> ${P}-source.tar.gz
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${PV}/tangent-${PV}-gentoo-vendor.tar.zst
+		-> ${P}-vendor.tar.zst
+"
+S="${WORKDIR}/tangent-${PV}"
 
 LICENSE="Apache-2.0"
 SLOT="0"
-IUSE="wayland"
 KEYWORDS="~amd64"
+IUSE="wayland"
 RESTRICT="mirror splitdebug strip"
 
 RDEPEND="
@@ -54,15 +59,9 @@ DESTDIR="/opt/${PN}"
 QA_PREBUILT="*"
 
 src_unpack() {
-	git-r3_src_unpack
-
-	local vendor_tarball="${DISTDIR}/${P}-gentoo-vendor.tar.zst"
-	if [[ ! -f "${vendor_tarball}" ]]; then
-		die "Missing ${vendor_tarball}. Create or download a live vendor cache tarball and place it in DISTDIR."
-	fi
-
+	unpack "${P}-source.tar.gz"
 	cd "${S}" || die
-	tar --zstd -xf "${vendor_tarball}" || die
+	tar --zstd -xf "${DISTDIR}/${P}-vendor.tar.zst" || die
 }
 
 src_configure() {
@@ -71,11 +70,9 @@ src_configure() {
 }
 
 src_compile() {
-	mkdir -p "${T}/home" "${T}/cache" || die
+	mkdir -p "${T}/home" || die
 	export HOME="${T}/home"
-	export XDG_CACHE_HOME="${T}/cache"
 	export npm_config_cache="${S}/vendor/npm-cache"
-	export NPM_CONFIG_CACHE="${S}/vendor/npm-cache"
 	export npm_config_offline=true
 	export npm_config_audit=false
 	export npm_config_fund=false
@@ -83,12 +80,12 @@ src_compile() {
 	export ELECTRON_CACHE="${S}/vendor/electron-cache"
 	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
 
-	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
-	npm --cache "${S}/vendor/npm-cache" exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
+	npm ci --workspaces --include-workspace-root --offline || die
+	npm run build --workspace packages/tangent-query-parser || die
+	npm run build --workspace packages/tangent-html-to-markdown || die
+	npm run build --workspace lib/typewriter || die
+	npm run build --workspace apps/tangent-electron || die
+	npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
 }
 
 src_install() {
@@ -127,7 +124,6 @@ src_install() {
 		-e "s|@@DESTDIR@@|${DESTDIR}|g" \
 		-e "s|@@WAYLAND_FLAGS@@|${exec_extra_flags[*]}|g" \
 		"${FILESDIR}/${PN}" >"${T}/tangent" || die
-	exeinto /usr/bin
 	newexe "${T}/tangent" tangent
 
 	make_desktop_entry --eapi9 "/usr/bin/tangent" -a "%U" -n Tangent -i tangent -c Office \
