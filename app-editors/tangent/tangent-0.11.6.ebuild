@@ -80,12 +80,12 @@ src_compile() {
 	export ELECTRON_CACHE="${S}/vendor/electron-cache"
 	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
 
-	npm ci --workspaces --include-workspace-root --offline || die
-	npm run build --workspace packages/tangent-query-parser || die
-	npm run build --workspace packages/tangent-html-to-markdown || die
-	npm run build --workspace lib/typewriter || die
-	npm run build --workspace apps/tangent-electron || die
-	npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
+	npm --cache "${S}/vendor/npm-cache" npm ci --workspaces --include-workspace-root --offline || die
+	npm --cache "${S}/vendor/npm-cache" npm run build --workspace packages/tangent-query-parser || die
+	npm --cache "${S}/vendor/npm-cache" npm run build --workspace packages/tangent-html-to-markdown || die
+	npm --cache "${S}/vendor/npm-cache" npm run build --workspace lib/typewriter || die
+	npm --cache "${S}/vendor/npm-cache" npm run build --workspace apps/tangent-electron || die
+	npm --cache "${S}/vendor/npm-cache" npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
 }
 
 src_install() {
