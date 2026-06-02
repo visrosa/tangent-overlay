@@ -70,9 +70,11 @@ src_configure() {
 }
 
 src_compile() {
-	mkdir -p "${T}/home" || die
+	mkdir -p "${T}/home" "${T}/cache" || die
 	export HOME="${T}/home"
+	export XDG_CACHE_HOME="${T}/cache"
 	export npm_config_cache="${S}/vendor/npm-cache"
+	export NPM_CONFIG_CACHE="${S}/vendor/npm-cache"
 	export npm_config_offline=true
 	export npm_config_audit=false
 	export npm_config_fund=false
@@ -80,12 +82,12 @@ src_compile() {
 	export ELECTRON_CACHE="${S}/vendor/electron-cache"
 	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
 
-	npm --cache "${S}/vendor/npm-cache" npm ci --workspaces --include-workspace-root --offline || die
-	npm --cache "${S}/vendor/npm-cache" npm run build --workspace packages/tangent-query-parser || die
-	npm --cache "${S}/vendor/npm-cache" npm run build --workspace packages/tangent-html-to-markdown || die
-	npm --cache "${S}/vendor/npm-cache" npm run build --workspace lib/typewriter || die
-	npm --cache "${S}/vendor/npm-cache" npm run build --workspace apps/tangent-electron || die
-	npm --cache "${S}/vendor/npm-cache" npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
+	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
+	npm --cache "${S}/vendor/npm-cache" exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent || die
 }
 
 src_install() {
