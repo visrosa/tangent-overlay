@@ -14,7 +14,7 @@ inherit chromium-2 desktop git-r3 unpacker xdg
 DESCRIPTION="Your Notes, Your Thoughts; Your Tangent"
 HOMEPAGE="https://github.com/visrosa/Tangent"
 EGIT_REPO_URI="https://github.com/visrosa/Tangent.git"
-EGIT_BRANCH="main"
+EGIT_BRANCH="dev"
 
 LICENSE="Apache-2.0"
 SLOT="0"
@@ -58,7 +58,9 @@ src_unpack() {
 
 	local vendor_tarball="${DISTDIR}/${P}-gentoo-vendor.tar.zst"
 	if [[ ! -f "${vendor_tarball}" ]]; then
-		die "Missing ${vendor_tarball}. Create or download a live vendor cache tarball and place it in DISTDIR."
+		die "Missing ${vendor_tarball}. Fetch it with tangent-fetch-9999-vendor" \
+			"(see tangent-overlay CLAUDE.md §Building the tangent-9999 vendor tarball)" \
+			"and place it in DISTDIR."
 	fi
 
 	cd "${S}" || die
