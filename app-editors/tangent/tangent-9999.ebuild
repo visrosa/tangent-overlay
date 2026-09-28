@@ -126,8 +126,17 @@ src_install() {
 
 	exeinto "${DESTDIR}"
 	newexe "${app_exe}" tangent
-	doexe "${app_dir}/chrome-sandbox" "${app_dir}/libEGL.so" "${app_dir}/libffmpeg.so" "${app_dir}/libGLESv2.so" \
+	doexe "${app_dir}/chrome-sandbox" "${app_dir}/libffmpeg.so" \
 		"${app_dir}/libvk_swiftshader.so" "${app_dir}/libvulkan.so.1"
+	# ANGLE's GL libraries shipped through Electron 42 (Tangent 0.12) but are
+	# gone from Electron 44's Linux build (Tangent 0.13), so install them only
+	# when present.
+	local angle_lib
+	for angle_lib in libEGL.so libGLESv2.so; do
+		if [[ -f "${app_dir}/${angle_lib}" ]]; then
+			doexe "${app_dir}/${angle_lib}"
+		fi
+	done
 
 	insinto "${DESTDIR}"
 	doins "${app_dir}/chrome_100_percent.pak" "${app_dir}/chrome_200_percent.pak" \
