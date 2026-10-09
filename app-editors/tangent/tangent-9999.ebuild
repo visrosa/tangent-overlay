@@ -88,12 +88,6 @@ src_compile() {
 	export ELECTRON_CACHE="${S}/vendor/electron-cache"
 	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
 
-	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
-	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
-
 	# Hand electron-builder an already-unpacked Electron (electronDist) instead
 	# of letting it "download" one. Since 0.13's electron-builder 26.15
 	# (@electron/get 5), even a cached Electron zip is re-validated against a
@@ -104,7 +98,10 @@ src_compile() {
 	#
 	# The version is read from electron-builder.json, so a vendor tarball built
 	# for a different Electron than the source expects dies here with a clear
-	# message instead of silently packaging the wrong runtime.
+	# message instead of silently packaging the wrong runtime. This runs before
+	# `npm ci` on purpose: a mismatched vendor tarball also lacks the matching
+	# npm packages, and `npm ci --offline` would otherwise fail first with a
+	# far less telling ENOTCACHED on the electron package.
 	local electron_version
 	electron_version=$(node -p 'require("./apps/tangent-electron/electron-builder.json").electronVersion') || die
 	local electron_zip=( "${S}"/vendor/electron-cache/*/"electron-v${electron_version}-linux-x64.zip" )
@@ -112,6 +109,11 @@ src_compile() {
 	mkdir -p "${T}/electron-dist" || die
 	unzip -q "${electron_zip[0]}" -d "${T}/electron-dist" || die
 
+	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
 	npm --cache "${S}/vendor/npm-cache" exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent "-c.electronDist=${T}/electron-dist" || die
 }
 
