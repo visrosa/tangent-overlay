@@ -1,0 +1,165 @@
+# Copyright 2026 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+
+EAPI=8
+
+CHROMIUM_LANGS="
+	af am ar bg bn ca cs da de el en-GB en-US es es-419 et fa fi fil fr gu he hi
+	hr hu id it ja kn ko lt lv ml mr ms nb nl pl pt-BR pt-PT ro ru sk sl sr sv
+	sw ta te th tr uk ur vi zh-CN zh-TW
+"
+
+inherit chromium-2 desktop unpacker xdg
+
+DESCRIPTION="Your Notes, Your Thoughts; Your Tangent"
+HOMEPAGE="https://github.com/visrosa/Tangent"
+MY_PV="${PV/_alpha/-alpha.}"
+SRC_URI="
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${MY_PV}/tangent-${MY_PV}-gentoo-source.tar.gz
+		-> ${P}-gentoo-source.tar.gz
+	https://github.com/visrosa/Tangent/releases/download/tangent-v${MY_PV}/tangent-${MY_PV}-gentoo-vendor.tar.zst
+		-> ${P}-gentoo-vendor.tar.zst
+"
+S="${WORKDIR}/tangent-${MY_PV}"
+
+LICENSE="Apache-2.0"
+SLOT="0"
+IUSE="wayland"
+KEYWORDS="~amd64"
+RESTRICT="mirror splitdebug strip"
+
+RDEPEND="
+	dev-libs/nss
+	dev-libs/openssl:0/3
+	media-libs/alsa-lib
+	media-libs/mesa
+	net-misc/curl
+	net-print/cups
+	sys-apps/dbus
+	sys-libs/glibc
+	virtual/zlib:=
+	x11-libs/cairo
+	x11-libs/gtk+:3
+	x11-libs/libX11
+	x11-libs/libXcomposite
+	x11-libs/libXdamage
+	x11-libs/libXext
+	x11-libs/libXfixes
+	x11-libs/libXrandr
+	x11-libs/libdrm
+	x11-libs/libxcb
+	x11-libs/libxkbcommon
+	x11-libs/pango
+"
+BDEPEND="
+	app-arch/unzip
+	app-arch/zstd
+	net-libs/nodejs[npm]
+"
+
+DESTDIR="/opt/${PN}"
+QA_PREBUILT="*"
+
+src_unpack() {
+	unpack "${P}-gentoo-source.tar.gz"
+	cd "${S}" || die
+	tar --zstd -xf "${DISTDIR}/${P}-gentoo-vendor.tar.zst" || die
+}
+
+src_configure() {
+	default
+	chromium_suid_sandbox_check_kernel_config
+}
+
+src_compile() {
+	mkdir -p "${T}/home" "${T}/cache" || die
+	export HOME="${T}/home"
+	export XDG_CACHE_HOME="${T}/cache"
+	export npm_config_cache="${S}/vendor/npm-cache"
+	export NPM_CONFIG_CACHE="${S}/vendor/npm-cache"
+	export npm_config_offline=true
+	export npm_config_audit=false
+	export npm_config_fund=false
+	export npm_config_update_notifier=false
+	export ELECTRON_CACHE="${S}/vendor/electron-cache"
+	export ELECTRON_BUILDER_CACHE="${S}/vendor/electron-builder-cache"
+
+	npm --cache "${S}/vendor/npm-cache" ci --workspaces --include-workspace-root --offline || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-query-parser || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace packages/tangent-html-to-markdown || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace lib/typewriter || die
+	npm --cache "${S}/vendor/npm-cache" run build --workspace apps/tangent-electron || die
+
+	# Hand electron-builder an already-unpacked Electron (electronDist) instead
+	# of letting it "download" one. Since 0.13's electron-builder 26.15
+	# (@electron/get 5), even a cached Electron zip is re-validated against a
+	# SHASUMS256.txt that is always fetched fresh from GitHub, bypassing the
+	# cache. The network sandbox blocks that, failing with ENETUNREACH. The
+	# vendored zip is the one CI downloaded, already covered by the vendor
+	# tarball's Manifest checksum, so skipping that second check loses nothing.
+	#
+	# The version is read from electron-builder.json, so a vendor tarball built
+	# for a different Electron than the source expects dies here with a clear
+	# message instead of silently packaging the wrong runtime.
+	local electron_version
+	electron_version=$(node -p 'require("./apps/tangent-electron/electron-builder.json").electronVersion') || die
+	local electron_zip=( "${S}"/vendor/electron-cache/*/"electron-v${electron_version}-linux-x64.zip" )
+	[[ -f ${electron_zip[0]} ]] || die "vendored Electron ${electron_version} zip not found in vendor/electron-cache"
+	mkdir -p "${T}/electron-dist" || die
+	unzip -q "${electron_zip[0]}" -d "${T}/electron-dist" || die
+
+	npm --cache "${S}/vendor/npm-cache" exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent "-c.electronDist=${T}/electron-dist" || die
+}
+
+src_install() {
+	local app_dir="apps/tangent-electron/dist/linux-unpacked"
+	local app_exe="${app_dir}/tangent"
+	[[ -x "${app_exe}" ]] || app_exe="${app_dir}/tangent_electron"
+
+	pushd "${app_dir}/locales" >/dev/null || die
+	chromium_remove_language_paks
+	popd >/dev/null || die
+
+	exeinto "${DESTDIR}"
+	newexe "${app_exe}" tangent
+	doexe "${app_dir}/chrome-sandbox" "${app_dir}/libffmpeg.so" \
+		"${app_dir}/libvk_swiftshader.so" "${app_dir}/libvulkan.so.1"
+	# ANGLE's GL libraries shipped through Electron 42 (Tangent 0.12) but are
+	# gone from Electron 44's Linux build (Tangent 0.13), so install them only
+	# when present.
+	local angle_lib
+	for angle_lib in libEGL.so libGLESv2.so; do
+		if [[ -f "${app_dir}/${angle_lib}" ]]; then
+			doexe "${app_dir}/${angle_lib}"
+		fi
+	done
+
+	insinto "${DESTDIR}"
+	doins "${app_dir}/chrome_100_percent.pak" "${app_dir}/chrome_200_percent.pak" \
+		"${app_dir}/icudtl.dat" "${app_dir}/resources.pak" \
+		"${app_dir}/snapshot_blob.bin" "${app_dir}/v8_context_snapshot.bin" "${app_dir}/vk_swiftshader_icd.json"
+	[[ -f "${app_dir}/version" ]] && doins "${app_dir}/version"
+	insopts -m0755
+	doins -r "${app_dir}/locales" "${app_dir}/resources"
+
+	fowners root "${DESTDIR}/chrome-sandbox"
+	fperms 4711 "${DESTDIR}/chrome-sandbox"
+
+	[[ -x "${app_dir}/chrome_crashpad_handler" ]] && doins "${app_dir}/chrome_crashpad_handler"
+
+	local exec_extra_flags=()
+	if use wayland; then
+		exec_extra_flags+=("--ozone-platform-hint=auto" "--enable-wayland-ime")
+	fi
+
+	sed \
+		-e "s|@@DESTDIR@@|${DESTDIR}|g" \
+		-e "s|@@WAYLAND_FLAGS@@|${exec_extra_flags[*]}|g" \
+		"${FILESDIR}/${PN}" >"${T}/tangent" || die
+	exeinto /usr/bin
+	newexe "${T}/tangent" tangent
+
+	make_desktop_entry --eapi9 "/usr/bin/tangent" -a "%U" -n Tangent -i tangent -c Office \
+		-e "Terminal=false"
+	newicon apps/tangent-electron/build/icon.png tangent.png || true
+}
